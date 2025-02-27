@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Interactive USA Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    /* Basic layout: map takes ~70% width; sidebar for state details takes the rest */
+    #map { width: 70%; height: 600px; float: left; }
+    #sidebar {
+      width: 28%;
+      height: 600px;
+      float: right;
+      padding: 10px;
+      border: 1px solid #ccc;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="sidebar">
+    <h2>State Details</h2>
+    <div id="state-info">Click on a state for details.</div>
+  </div>
+
+  <!-- Include Leaflet and jQuery -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    // Initialize the map centered over the USA
+    var map = L.map('map').setView([37.8, -96], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18
+    }).addTo(map);
+
+    // Define event handlers for each state feature
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: function(e) {
+          var layer = e.target;
+          layer.setStyle({
+            weight: 2,
+            color: '#666',
+            fillOpacity: 0.7
+          });
+        },
+        mouseout: function(e) {
+          geojson.resetStyle(e.target);
+        },
+        click: function(e) {
+          // On click, use AJAX to get rebate data for the clicked state
+          $.ajax({
+            url: '/api/stateData', // Ensure this endpoint is set up in your backend
+            data: { state: feature.properties.name },
+            success: function(data) {
+              $('#state-info').html(
+                '<h3>' + feature.properties.name + '</h3>' +
+                '<p>' + (data.rebateInfo || 'No data available.') + '</p>'
+              );
+            },
+            error: function() {
+              $('#state-info').html(
+                '<h3>' + feature.properties.name + '</h3>' +
+                '<p>Error retrieving data.</p>'
+              );
+            }
+          });
+        }
+      });
+    }
+
+    // Load US states GeoJSON and add to the map
+    var geojson;
+    $.getJSON('path/to/us-states.geojson', function(data) { // Update this path to your GeoJSON file
+      geojson = L.geoJson(data, {
+        style: function(feature) {
+          return {
+            fillColor: '#CCCCCC',
+            weight: 1,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.5
+          };
+        },
+        onEachFeature: onEachFeature
+      }).addTo(map);
+    });
+  </script>
+</body>
+</html>
